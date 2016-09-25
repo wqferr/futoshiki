@@ -63,7 +63,7 @@ void bitarray_toggle(BitArray *a, size_t i) {
     _toggle_bit(a->bytes[i/CHAR_BIT], i%CHAR_BIT);
 }
 
-void bitarray_setBit(BitArray *a, size_t i, bool x) {
+void bitarray_setTo(BitArray *a, size_t i, bool x) {
     _set_bit_to(a->bytes[i/CHAR_BIT], i%CHAR_BIT, x);
 }
 

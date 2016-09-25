@@ -19,6 +19,6 @@ void bitarray_set(BitArray *, size_t);
 void bitarray_unset(BitArray *, size_t);
 void bitarray_toggle(BitArray *, size_t);
 
-void bitarray_setBit(BitArray *, size_t, bool);
+void bitarray_setTo(BitArray *, size_t, bool);
 
 #endif /* ifndef _BITARRAY_H_ */
