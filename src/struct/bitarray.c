@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "bitarray.h"
+#include "struct/bitarray.h"
 
 #define FIRST_BIT 0b10000000
 #define _bit(n) (FIRST_BIT >> n)
@@ -40,31 +40,31 @@ unsigned char bitarray_getByte(const BitArray *a, size_t i) {
 
 bool bitarray_check(const BitArray *a, size_t i) {
     return _check_bit(
-                a->bytes[i/8],
-                i%8
+                a->bytes[i/CHAR_BIT],
+                i%CHAR_BIT
     );
 }
 
 void bitarray_set(BitArray *a, size_t i) {
     _set_bit(
-            a->bytes[i/8],
-            i%8
+            a->bytes[i/CHAR_BIT],
+            i%CHAR_BIT
     );
 }
 
 void bitarray_unset(BitArray *a, size_t i) {
     _unset_bit(
-            a->bytes[i/8],
-            i%8
+            a->bytes[i/CHAR_BIT],
+            i%CHAR_BIT
     );
 }
 
 void bitarray_toggle(BitArray *a, size_t i) {
-    _toggle_bit(a->bytes[i/8], i%8);
+    _toggle_bit(a->bytes[i/CHAR_BIT], i%CHAR_BIT);
 }
 
 void bitarray_setBit(BitArray *a, size_t i, bool x) {
-    _set_bit_to(a->bytes[i/8], i%8, x);
+    _set_bit_to(a->bytes[i/CHAR_BIT], i%CHAR_BIT, x);
 }
 
 #undef _set_bit_to
