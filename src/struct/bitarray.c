@@ -67,6 +67,46 @@ void bitarray_setTo(BitArray *a, size_t i, bool x) {
     _set_bit_to(a->bytes[i/CHAR_BIT], i%CHAR_BIT, x);
 }
 
+void bitarray_setAll(BitArray *a) {
+    size_t i = (a->nBits+CHAR_BIT-1) / CHAR_BIT;
+
+    while (i > 0) {
+        a->bytes[i] = 1;
+        i--;
+    }
+    a->bytes[0] = 1;
+}
+
+void bitarray_unsetAll(BitArray *a) {
+    size_t i = (a->nBits+CHAR_BIT-1) / CHAR_BIT;
+
+    while (i > 0) {
+        a->bytes[i] = 0;
+        i--;
+    }
+    a->bytes[0] = 0;
+}
+
+void bitarray_toggleAll(BitArray *a) {
+    size_t i = (a->nBits+CHAR_BIT-1) / CHAR_BIT;
+
+    while (i > 0) {
+        a->bytes[i] = ~a->bytes[i];
+        i--;
+    }
+    a->bytes[0] = ~a->bytes[0];
+}
+
+void bitarray_setAllTo(BitArray *a, bool x) {
+    size_t i = (a->nBits+CHAR_BIT-1) / CHAR_BIT;
+
+    while (i > 0) {
+        a->bytes[i] = x;
+        i--;
+    }
+    a->bytes[0] = x;
+}
+
 #undef _set_bit_to
 #undef _toggle_bit
 #undef _unset_bit
