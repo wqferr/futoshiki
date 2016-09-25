@@ -71,10 +71,10 @@ void bitarray_setAll(BitArray *a) {
     size_t i = (a->nBits+CHAR_BIT-1) / CHAR_BIT;
 
     while (i > 0) {
-        a->bytes[i] = 1;
+        a->bytes[i] = UCHAR_MAX;
         i--;
     }
-    a->bytes[0] = 1;
+    a->bytes[0] = UCHAR_MAX;
 }
 
 void bitarray_unsetAll(BitArray *a) {
@@ -99,12 +99,13 @@ void bitarray_toggleAll(BitArray *a) {
 
 void bitarray_setAllTo(BitArray *a, bool x) {
     size_t i = (a->nBits+CHAR_BIT-1) / CHAR_BIT;
+    unsigned char b = UCHAR_MAX * (unsigned char) x;
 
     while (i > 0) {
-        a->bytes[i] = x;
+        a->bytes[i] = b;
         i--;
     }
-    a->bytes[0] = x;
+    a->bytes[0] = b;
 }
 
 #undef _set_bit_to
