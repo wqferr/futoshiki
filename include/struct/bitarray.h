@@ -16,12 +16,12 @@ unsigned char bitarray_getByte(const BitArray *, size_t);
 bool bitarray_check(const BitArray *, size_t);
 
 void bitarray_set(BitArray *, size_t);
-void bitarray_unset(BitArray *, size_t);
+void bitarray_clear(BitArray *, size_t);
 void bitarray_toggle(BitArray *, size_t);
 void bitarray_setTo(BitArray *, size_t, bool);
 
 void bitarray_setAll(BitArray *);
-void bitarray_unsetAll(BitArray *);
+void bitarray_clearAll(BitArray *);
 void bitarray_toggleAll(BitArray *);
 void bitarray_setAllTo(BitArray *, bool);
 

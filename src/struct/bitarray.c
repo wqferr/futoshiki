@@ -9,7 +9,7 @@
 #define _check_bit(n, i) (n & _bit(i))
 
 #define _set_bit(n, i) n |= _bit(i)
-#define _unset_bit(n, i) n &= ~_bit(i)
+#define _clear_bit(n, i) n &= ~_bit(i)
 #define _toggle_bit(n, i) n ^= _bit(i)
 #define _set_bit_to(n, i, x) n = (n & ~_shl(!x, i)) | _shl(x, i)
 
@@ -52,8 +52,8 @@ void bitarray_set(BitArray *a, size_t i) {
     );
 }
 
-void bitarray_unset(BitArray *a, size_t i) {
-    _unset_bit(
+void bitarray_clear(BitArray *a, size_t i) {
+    _clear_bit(
             a->bytes[i/CHAR_BIT],
             i%CHAR_BIT
     );
@@ -82,7 +82,7 @@ void bitarray_setAll(BitArray *a) {
     a->bytes[0] = UCHAR_MAX;
 }
 
-void bitarray_unsetAll(BitArray *a) {
+void bitarray_clearAll(BitArray *a) {
     size_t i = ((a->nBits+CHAR_BIT-1) / CHAR_BIT)  -  1;
 
     while (i > 0) {
@@ -115,7 +115,7 @@ void bitarray_setAllTo(BitArray *a, bool x) {
 
 #undef _set_bit_to
 #undef _toggle_bit
-#undef _unset_bit
+#undef _clear_bit
 #undef _set_bit
 #undef _get_bit
 #undef _shl
