@@ -16,6 +16,8 @@ Puzzle *puzzle_new(FILE *);
  */
 void puzzle_destroy(Puzzle *);
 
+bool _puzzle_checkValidState(Puzzle *);
+
 
 /**
  * Solves the given Puzzle.
