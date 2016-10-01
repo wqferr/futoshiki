@@ -70,6 +70,8 @@ Cell *cell_new(unsigned char row, unsigned char col, unsigned char puzzleDim) {
 #if OPT_LEVEL >= OPT_BITMAP
     c->possibilities = bitarray_new(puzzleDim);
     bitarray_setAll(c->possibilities);
+#else
+    (void) puzzleDim;
 #endif
 
     c->nextInOrder = NULL;
@@ -315,20 +317,24 @@ void puzzle_destroy(Puzzle *p) {
 }
 
 bool _checkValid(Puzzle *p, Cell *c, unsigned char v) {
+#if OPT_LEVEL >= OPT_CHECK_ROWS
     unsigned char i;
+#   if OPT_LEVEL >= OPT_BITMAP
 
-#if OPT_LEVEL >= OPT_BITMAP
     if (!bitarray_check(c->possibilities, v-1))
         return false;
-#endif
+#   endif
 
-#if OPT_LEVEL >= OPT_CHECK_ROWS
     for (i = 0; i < p->dim; i++) {
         if (p->cells[i][c->col]->val == v && i != c->row)
             return false;
         if (p->cells[c->row][i]->val == v && i != c->col)
             return false;
     }
+#else
+    (void) p;
+    (void) c;
+    (void) v;
 #endif
 
     return true;
