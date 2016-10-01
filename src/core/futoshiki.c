@@ -7,6 +7,7 @@
 
 #include "struct/bitarray.h"
 #include "struct/list.h"
+#include "struct/heap.h"
 
 typedef struct Constraint Constriction;
 typedef struct Cell Cell;
@@ -21,7 +22,11 @@ struct Cell {
     Cell *constraints[4];
     unsigned char nConstr;
 
+#if OPT_LEVEL >= OPT_BITMAP
     BitArray *possibilities;
+#endif
+
+    Cell *nextInOrder;
 };
 
 struct Puzzle {
@@ -29,10 +34,29 @@ struct Puzzle {
     unsigned char dim;
 
     List *constrCells;
+    Cell *first;
 };
 
+Cell *_firstEmptyCell(Puzzle *);
 
 
+#if OPT_LEVEL >= OPT_MVR
+int cell_compareComplexity(const void *r1, const void *r2) {
+    Cell *c1 = (Cell *) r1,
+         *c2 = (Cell *) r2;
+
+    unsigned int i, n1, n2;
+    n1 = 0;
+    n2 = 0;
+
+    for (i = 0; i < bitarray_getNBits(c1->possibilities); i++) {
+        n1 += bitarray_check(c1->possibilities, i);
+        n2 += bitarray_check(c2->possibilities, i);
+    }
+
+    return n1 - n2;
+}
+#endif
 
 
 Cell *cell_new(unsigned char row, unsigned char col, unsigned char puzzleDim) {
@@ -42,16 +66,23 @@ Cell *cell_new(unsigned char row, unsigned char col, unsigned char puzzleDim) {
     c->col = col;
     c->val = 0;
     memset(c->constraints, 0, sizeof(c->constraints));
+
+#if OPT_LEVEL >= OPT_BITMAP
     c->possibilities = bitarray_new(puzzleDim);
     bitarray_setAll(c->possibilities);
+#endif
 
+    c->nextInOrder = NULL;
     c->nConstr = 0;
 
     return c;
 }
 
 void cell_destroy(Cell *c) {
+#if OPT_LEVEL >= OPT_BITMAP
     bitarray_destroy(c->possibilities);
+#endif
+
     free(c);
 }
 
@@ -92,6 +123,27 @@ bool _puzzle_checkIndividualConstr(Puzzle *p) {
     listiter_destroy(iter);
 
     return valid;
+}
+
+Cell *_nextEmptyCell(Puzzle *p, Cell *c) {
+    unsigned char row, col;
+    Cell *other;
+
+    row = c->row;
+    col = c->col + 1;
+    while (row < p->dim) {
+        while (col < p->dim) {
+            other = p->cells[row][col];
+            if (other->val == 0)
+                return other;
+
+            col++;
+        }
+        col = 0;
+        row++;
+    }
+
+    return false;
 }
 
 bool _puzzle_checkValidState(Puzzle *p) {
@@ -159,6 +211,10 @@ Puzzle *puzzle_new(FILE *stream) {
     unsigned char k, v;
 #endif
 
+#if OPT_LEVEL >= OPT_MVR
+    Heap *h;
+#endif
+
     Cell *c;
     Puzzle *p = malloc(sizeof(*p));
 
@@ -213,6 +269,32 @@ Puzzle *puzzle_new(FILE *stream) {
 
 #       endif
 #   endif
+#endif
+
+#if OPT_LEVEL < OPT_MVR
+    c = p->cells[0][0];
+    while (c != NULL) {
+        c->nextInOrder = _nextEmptyCell(p, c);
+        c = c->nextInOrder;
+    }
+    p->first = _firstEmptyCell(p);
+#else
+    h = heap_new(&cell_compareComplexity);
+
+    for (i = 0; i < p->dim; i++)
+        for (j = 0; j < p->dim; j++)
+            if (p->cells[i][j]->val == 0)
+                heap_push(h, p->cells[i][j]);
+
+    p->first = heap_pop(h);
+
+    c = p->first;
+    while (!heap_isEmpty(h)) {
+        c->nextInOrder = heap_pop(h);
+        c = c->nextInOrder;
+    }
+
+    heap_destroy(h);
 #endif
 
     return p;
@@ -271,49 +353,17 @@ unsigned char _nextValue(Puzzle *p, Cell *c) {
 #endif
 }
 
-bool _nextCell(Puzzle *p, unsigned char *r, unsigned char *c) {
-    unsigned char i, j;
+Cell *_firstEmptyCell(Puzzle *p) {
+    Cell *c = p->cells[0][0];
 
-    i = *r;
-    j = *c + 1;
-    if (j == p->dim) {
-        j = 0;
-        i++;
-    }
+    if (c->val != 0)
+        c = _nextEmptyCell(p, c);
 
-    while (i < p->dim) {
-        while (j < p->dim) {
-            if (p->cells[i][j]->val == 0) {
-                *r = i;
-                *c = j;
-                return true;
-            }
-
-            j++;
-        }
-        j = 0;
-        i++;
-    }
-
-    return false;
+    return c;
 }
 
-void _firstCell(Puzzle *p, unsigned char *r, unsigned char *c) {
-    *r = 0;
-    *c = 0;
-
-    if (p->cells[0][0]->val != 0)
-        _nextCell(p, r, c);
-}
-
-bool _backtrack(Puzzle *p, unsigned char row, unsigned char col) {
-    unsigned char nrow, ncol;
-    bool isLast;
-    Cell *c = p->cells[row][col];
-
-    nrow = row;
-    ncol = col;
-    isLast = !_nextCell(p, &nrow, &ncol);
+bool _backtrack(Puzzle *p, Cell *c) {
+    bool isLast = c->nextInOrder == NULL;
 
     // Update cell's value and repeat until all values
     // are exhausted
@@ -330,7 +380,7 @@ bool _backtrack(Puzzle *p, unsigned char row, unsigned char col) {
             // Only check further if this value is valid so far
             if (_puzzle_checkValidState(p)) {
 #endif
-                if (_backtrack(p, nrow, ncol)) // Everything OK
+                if (_backtrack(p, c->nextInOrder)) // Everything OK
                     return true;
 
 #if OPT_LEVEL > OPT_NONE
@@ -346,14 +396,9 @@ bool _backtrack(Puzzle *p, unsigned char row, unsigned char col) {
 }
 
 bool puzzle_solve(Puzzle *p) {
-    unsigned char row, col;
-
-    row = 0;
-    col = 0;
-    _firstCell(p, &row, &col);
-
     // TODO add simplification process
-    return _backtrack(p, row, col);
+
+    return _backtrack(p, p->first);
 }
 
 void puzzle_display(const Puzzle *p, FILE *stream) {

@@ -9,7 +9,7 @@
 #define OPT_INEQ 5
 #define OPT_CHAINS 6
 
-#define OPT_LEVEL OPT_NONE
+#define OPT_LEVEL OPT_MVR
 
 #include <stdio.h>
 #include <stdbool.h>
