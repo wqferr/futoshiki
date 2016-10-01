@@ -1,7 +1,15 @@
 #ifndef _FUTOSHIKI_H_
 #define _FUTOSHIKI_H_ 1
 
-#define OPTIMIZATION_LEVEL 0
+#define OPT_NONE 0
+#define OPT_BASIC 1
+#define OPT_CHECK_ROWS 2
+#define OPT_BITMAP 3
+#define OPT_MVR 4
+#define OPT_INEQ 5
+#define OPT_CHAINS 6
+
+#define OPT_LEVEL OPT_NONE
 
 #include <stdio.h>
 #include <stdbool.h>

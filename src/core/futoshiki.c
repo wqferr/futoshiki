@@ -94,8 +94,6 @@ bool _puzzle_checkIndividualConstr(Puzzle *p) {
     return valid;
 }
 
-void f(void) {}
-
 bool _puzzle_checkValidState(Puzzle *p) {
     unsigned char i, j;
     bool valid = true;
@@ -157,6 +155,10 @@ Puzzle *puzzle_new(FILE *stream) {
     unsigned char r1, c1;
     unsigned char r2, c2;
 
+#if OPT_LEVEL >= OPT_BITMAP
+    unsigned char k, v;
+#endif
+
     Cell *c;
     Puzzle *p = malloc(sizeof(*p));
 
@@ -184,6 +186,35 @@ Puzzle *puzzle_new(FILE *stream) {
         );
     }
 
+#if OPT_LEVEL >= OPT_BITMAP
+    for (i = 0; i < p->dim; i++) {
+        for (j = 0; j < p->dim; j++) {
+            v = p->cells[i][j]->val;
+
+            if (v > 0) {
+                for (k = 0; k < p->dim; k++) {
+                    c = p->cells[i][k];
+                    bitarray_clear(c->possibilities, v-1);
+
+                    c = p->cells[k][j];
+                    bitarray_clear(c->possibilities, v-1);
+                }
+            }
+        }
+    }
+
+#   if OPT_LEVEL >= OPT_INEQ
+
+    // TODO
+
+#       if OPT_LEVEL >= OPT_CHAINS
+
+    // TODO
+
+#       endif
+#   endif
+#endif
+
     return p;
 }
 
@@ -201,9 +232,43 @@ void puzzle_destroy(Puzzle *p) {
     free(p);
 }
 
+bool _checkValid(Puzzle *p, Cell *c, unsigned char v) {
+    unsigned char i;
+
+#if OPT_LEVEL >= OPT_BITMAP
+    if (!bitarray_check(c->possibilities, v-1))
+        return false;
+#endif
+
+#if OPT_LEVEL >= OPT_CHECK_ROWS
+    for (i = 0; i < p->dim; i++) {
+        if (p->cells[i][c->col]->val == v && i != c->row)
+            return false;
+        if (p->cells[c->row][i]->val == v && i != c->col)
+            return false;
+    }
+#endif
+
+    return true;
+}
+
 unsigned char _nextValue(Puzzle *p, Cell *c) {
-    // TODO use other heuristics according to preprocessor flags
-    return (c->val+1) % (p->dim+1);
+#if OPT_LEVEL >= OPT_BITMAP
+    unsigned char i;
+
+    for (i = c->val+1; i <= p->dim; i++) {
+        if (_checkValid(p, c, i)) {
+            c->val = i;
+            return i;
+        }
+    }
+
+    c->val = 0;
+    return 0;
+#else
+    c->val = (c->val+1) % (p->dim+1);
+    return c->val;
+#endif
 }
 
 bool _nextCell(Puzzle *p, unsigned char *r, unsigned char *c) {
@@ -252,7 +317,7 @@ bool _backtrack(Puzzle *p, unsigned char row, unsigned char col) {
 
     // Update cell's value and repeat until all values
     // are exhausted
-    while ((c->val = _nextValue(p, c)) != 0) {
+    while (_nextValue(p, c) != 0) {
         // Check for any inconsistencies for this particular value
         if (isLast) {
             if (_puzzle_checkValidState(p))
@@ -261,14 +326,14 @@ bool _backtrack(Puzzle *p, unsigned char row, unsigned char col) {
             // There are more cells ahead
             // Try to fill'em up
             //
-#if OPTIMIZATION_LEVEL > 0
+#if OPT_LEVEL > OPT_NONE
             // Only check further if this value is valid so far
             if (_puzzle_checkValidState(p)) {
 #endif
                 if (_backtrack(p, nrow, ncol)) // Everything OK
                     return true;
 
-#if OPTIMIZATION_LEVEL > 0
+#if OPT_LEVEL > OPT_NONE
             }
 #endif
         }
