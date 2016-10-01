@@ -14,12 +14,12 @@ typedef struct Cell Cell;
 struct Cell {
     unsigned char val;
 
-    unsigned char row : 4;
-    unsigned char col : 4;
+    unsigned char row;
+    unsigned char col;
 
     // Cells whose values must be greater than this
     Cell *constraints[4];
-    unsigned char nConstr : 3;
+    unsigned char nConstr;
 
     BitArray *possibilities;
 };
