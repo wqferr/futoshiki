@@ -1,6 +1,8 @@
 #ifndef _FUTOSHIKI_H_
 #define _FUTOSHIKI_H_ 1
 
+#define OPTIMIZATION_LEVEL 0
+
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -16,11 +18,11 @@ Puzzle *puzzle_new(FILE *);
  */
 void puzzle_destroy(Puzzle *);
 
-bool _puzzle_checkValidState(Puzzle *);
-
 
 /**
  * Solves the given Puzzle.
+ * Retruns wether or not the puzzle has a solution.
+ * If not, the state of the cells are not changed.
  */
 bool puzzle_solve(Puzzle *);
 

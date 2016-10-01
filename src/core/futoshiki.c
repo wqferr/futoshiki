@@ -94,6 +94,8 @@ bool _puzzle_checkIndividualConstr(Puzzle *p) {
     return valid;
 }
 
+void f(void) {}
+
 bool _puzzle_checkValidState(Puzzle *p) {
     unsigned char i, j;
     bool valid = true;
@@ -197,6 +199,96 @@ void puzzle_destroy(Puzzle *p) {
     }
     free(p->cells);
     free(p);
+}
+
+unsigned char _nextValue(Puzzle *p, Cell *c) {
+    // TODO use other heuristics according to preprocessor flags
+    return (c->val+1) % (p->dim+1);
+}
+
+bool _nextCell(Puzzle *p, unsigned char *r, unsigned char *c) {
+    unsigned char i, j;
+
+    i = *r;
+    j = *c + 1;
+    if (j == p->dim) {
+        j = 0;
+        i++;
+    }
+
+    while (i < p->dim) {
+        while (j < p->dim) {
+            if (p->cells[i][j]->val == 0) {
+                *r = i;
+                *c = j;
+                return true;
+            }
+
+            j++;
+        }
+        j = 0;
+        i++;
+    }
+
+    return false;
+}
+
+void _firstCell(Puzzle *p, unsigned char *r, unsigned char *c) {
+    *r = 0;
+    *c = 0;
+
+    if (p->cells[0][0]->val != 0)
+        _nextCell(p, r, c);
+}
+
+bool _backtrack(Puzzle *p, unsigned char row, unsigned char col) {
+    unsigned char nrow, ncol;
+    bool isLast;
+    Cell *c = p->cells[row][col];
+
+    nrow = row;
+    ncol = col;
+    isLast = !_nextCell(p, &nrow, &ncol);
+
+    // Update cell's value and repeat until all values
+    // are exhausted
+    while ((c->val = _nextValue(p, c)) != 0) {
+        // Check for any inconsistencies for this particular value
+        if (isLast) {
+            if (_puzzle_checkValidState(p))
+                return true;
+        } else {
+            // There are more cells ahead
+            // Try to fill'em up
+            //
+#if OPTIMIZATION_LEVEL > 0
+            // Only check further if this value is valid so far
+            if (_puzzle_checkValidState(p)) {
+#endif
+                if (_backtrack(p, nrow, ncol)) // Everything OK
+                    return true;
+
+#if OPTIMIZATION_LEVEL > 0
+            }
+#endif
+        }
+
+        // Try next value
+    }
+
+    // All values were tried
+    return false;
+}
+
+bool puzzle_solve(Puzzle *p) {
+    unsigned char row, col;
+
+    row = 0;
+    col = 0;
+    _firstCell(p, &row, &col);
+
+    // TODO add simplification process
+    return _backtrack(p, row, col);
 }
 
 void puzzle_display(const Puzzle *p, FILE *stream) {

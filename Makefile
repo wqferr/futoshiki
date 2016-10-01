@@ -71,7 +71,7 @@ CFLAGS := -Wno-unused-result -I./$(INCDIR)
 
 # Flags to be added after <CFLAGS> when compiling
 # in debug mode (i.e. <over> is defined). See below.
-DBGFLAGS := -g -Wall -Wextra -O3 -march=native
+DBGFLAGS := -g -Wall -Wextra -O0
 
 # Default flags when over is "valgrind" 
 VALGRINDFLAGS := -v --leak-check=full --show-leak-kinds=all --read-var-info=yes --track-origins=yes
