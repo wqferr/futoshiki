@@ -17,7 +17,7 @@ struct Cell {
     unsigned char row : 4;
     unsigned char col : 4;
 
-    // Cells whose values are greater than this
+    // Cells whose values must be greater than this
     Cell *constraints[4];
     unsigned char nConstr : 3;
 
