@@ -1,2 +1,5 @@
 build/Futoshiki
 vgcore.*
+
+etc/cases/out/*
+*.o
