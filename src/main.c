@@ -10,11 +10,11 @@ int main(void) {
 	int i, ncases;
 	scanf("%d", &ncases);
 
-	for(i = 0; i < ncases; i++){
+	for(i = 1; i <= ncases; i++){
 	    Puzzle *p = puzzle_new(stdin);
 
-	    puzzle_solve(p);
 	    printf("%d\n", i);
+	    printf("%d\n", puzzle_solve(p));
 	    puzzle_display(p, stdout);
 
 	    puzzle_destroy(p);

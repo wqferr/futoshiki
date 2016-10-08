@@ -28,6 +28,8 @@ struct Puzzle {
 Cell *cell_new(Puzzle *p, uchar row, uchar col, uchar val) {
     Cell *c = malloc(sizeof(*c));
 
+    (void) p;
+
     c->val = val;
     c->row = row;
     c->col = col;
@@ -42,10 +44,24 @@ void cell_destroy(Cell *c) {
 
 bool cell_nextValue(Puzzle *p, Cell *c) {
     c->val = (c->val+1) % (p->size+1);
-    return c->val != 0;
+    return c->val;
 }
 
 Cell *cell_nextInSeq(Puzzle *p, Cell *c) {
+    uchar i, j;
+    i = c->row;
+    j = c->col + 1;
+
+    while (i < p->size) {
+        while (j < p->size) {
+            if (p->cells[i][j]->val == 0)
+                return p->cells[i][j];
+            j++;
+        }
+
+        j = 0;
+        i++;
+    }
     return NULL;
 }
 
@@ -64,13 +80,13 @@ Puzzle *puzzle_new(FILE *stream) {
     uchar i, j;
     uchar k, l;
 
-    Cell *c;
     Puzzle *p = malloc(sizeof(*p));
 
     fscanf(stream, "%hhu%hhu", &p->size, &nConstr);
+    p->cells = malloc(p->size * sizeof(*p->cells));
 
     for (i = 0; i < p->size; i++) {
-        p->cells = malloc(p->size * sizeof(*p->cells));
+        p->cells[i] = malloc(p->size * sizeof(**p->cells));
         for (j = 0; j < p->size; j++) {
             fscanf(stream, "%hhu", &v);
             p->cells[i][j] = cell_new(p, i, j, v);
@@ -83,6 +99,8 @@ Puzzle *puzzle_new(FILE *stream) {
         puzzle_addConstr(p, p->cells[i-1][j-1], p->cells[k-1][l-1]);
         nConstr--;
     }
+
+    return p;
 }
 
 void puzzle_destroy(Puzzle *p) {
@@ -94,11 +112,15 @@ void puzzle_destroy(Puzzle *p) {
             cell_destroy(p->cells[i][j]);
         free(p->cells[i]);
     }
+    free(p->cells);
+    free(p);
 }
 
-bool puzzle_checkValidState(Puzzle *p) {
+bool puzzle_checkSolved(Puzzle *p) {
     BitArray *numsInRow = bitarray_new(p->size);
     BitArray *numsInCol = bitarray_new(p->size);
+    ListIterator *constrIter;
+    Cell *c;
     uchar i, j;
     uchar v;
     bool valid = true;
@@ -119,20 +141,26 @@ bool puzzle_checkValidState(Puzzle *p) {
             v = p->cells[i][j]->val;
 
             if (v > 0) {
-                if (bitarray_check(numsInRow, v-1)) // Same number was set previously in row
+                // Same number was set previously in row
+                if (bitarray_check(numsInRow, v-1))
                     valid = false;
                 else
                     bitarray_set(numsInRow, v-1);
+            } else {
+                valid = false;
             }
 
 
             v = p->cells[j][i]->val;
 
             if (v > 0) {
-                if (bitarray_check(numsInCol, v-1)) // Same number was set previously in column
+                // Same number was set previously in column
+                if (bitarray_check(numsInCol, v-1))
                     valid = false;
                 else
                     bitarray_set(numsInCol, v-1);
+            } else {
+                valid = false;
             }
 
             j++;
@@ -143,6 +171,21 @@ bool puzzle_checkValidState(Puzzle *p) {
 
     bitarray_destroy(numsInRow);
     bitarray_destroy(numsInCol);
+
+    constrIter = list_iterator(p->constrCells);
+
+    while (valid && listiter_hasNext(constrIter)) {
+        c = listiter_next(constrIter);
+        if (c->val > 0) {
+            for (i = 0; i < c->nConstr; i++)
+                if (c->val > c->constr[i]->val)
+                    valid = false;
+        } else {
+            valid = false;
+        }
+    }
+
+    listiter_destroy(constrIter);
 
     return valid;
 }
@@ -162,7 +205,7 @@ Cell *_firstCell(Puzzle *p) {
 
 bool _backtrack(Puzzle *p, Cell *c) {
     if (c == NULL)
-        return puzzle_checkValidState(p);
+        return puzzle_checkSolved(p);
 
     while (cell_nextValue(p, c)) {
         if (_backtrack(p, cell_nextInSeq(p, c)))
