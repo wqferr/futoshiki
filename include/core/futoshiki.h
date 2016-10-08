@@ -2,10 +2,10 @@
 #define _FUTOSHIKI_H_ 1
 
 #define OPT_NONE 0
-#define OPT_BASIC 1
+#define OPT_FORWARD_CHECKING 1
 #define OPT_MVR 2
 
-#define OPT_LEVEL OPT_NONE
+#define OPT_LEVEL OPT_FORWARD_CHECKING
 
 #include <stdio.h>
 #include <stdbool.h>

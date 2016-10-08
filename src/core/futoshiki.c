@@ -16,6 +16,8 @@ typedef struct Cell {
     uchar nConstr;
     struct Cell *constr[4];
 
+    uchar *restrictedValues;
+
 } Cell;
 
 struct Puzzle {
@@ -28,23 +30,83 @@ struct Puzzle {
 Cell *cell_new(Puzzle *p, uchar row, uchar col, uchar val) {
     Cell *c = malloc(sizeof(*c));
 
-    (void) p;
-
     c->val = val;
     c->row = row;
     c->col = col;
     c->nConstr = 0;
+    c->restrictedValues = calloc(p->size, sizeof(*c->restrictedValues));
 
     return c;
 }
 
 void cell_destroy(Cell *c) {
+    free(c->restrictedValues);
     free(c);
 }
 
+void _strengthenRestrValues(Puzzle *p, uchar row, uchar col, uchar val) {
+    uchar i;
+    Cell *otherInRow, *otherInCol;
+
+    if (val > 0) {
+        for (i = 0; i < p->size; i++) {
+            if (i != col) {
+                otherInRow = p->cells[row][i];
+                otherInRow->restrictedValues[val-1]++;
+            }
+            if (i != row) {
+                otherInCol = p->cells[i][col];
+                otherInCol->restrictedValues[val-1]++;
+            }
+        }
+    }
+}
+
+void _lessenRestrValues(Puzzle *p, uchar row, uchar col, uchar val) {
+    uchar i;
+    Cell *otherInRow, *otherInCol;
+
+    if (val > 0) {
+        for (i = 0; i < p->size; i++) {
+            if (i != col) {
+                otherInRow = p->cells[row][i];
+                otherInRow->restrictedValues[val-1]--;
+            }
+
+            if (i != row) {
+                otherInCol = p->cells[i][col];
+                otherInCol->restrictedValues[val-1]--;
+            }
+        }
+    }
+}
+
+void _updateRestrictedValues(Puzzle *p, Cell *c, uchar newVal) {
+    _lessenRestrValues(p, c->row, c->col, c->val);
+    _strengthenRestrValues(p, c->row, c->col, newVal);
+}
+
 bool cell_nextValue(Puzzle *p, Cell *c) {
+#if OPT_LEVEL < OPT_FORWARD_CHECKING
+
     c->val = (c->val+1) % (p->size+1);
-    return c->val;
+
+#else
+
+    uchar newVal = c->val+1;
+
+    while (newVal <= p->size && c->restrictedValues[newVal-1] > 0) {
+        newVal++;
+    }
+
+    if (newVal > p->size)
+        newVal = 0;
+
+    _updateRestrictedValues(p, c, newVal);
+    c->val = newVal;
+#endif
+
+    return c->val > 0;
 }
 
 Cell *cell_nextInSeq(Puzzle *p, Cell *c) {
@@ -98,6 +160,15 @@ Puzzle *puzzle_new(FILE *stream) {
         fscanf(stream, "%hhu%hhu%hhu%hhu", &i, &j, &k, &l);
         puzzle_addConstr(p, p->cells[i-1][j-1], p->cells[k-1][l-1]);
         nConstr--;
+    }
+
+
+    for (i = 0; i < p->size; i++) {
+        for (j = 0; j < p->size; j++) {
+            v = p->cells[i][j]->val;
+            if (v > 0)
+                _strengthenRestrValues(p, i, j, v);
+        }
     }
 
     return p;

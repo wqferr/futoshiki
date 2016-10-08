@@ -14,7 +14,7 @@ int main(void) {
 	    Puzzle *p = puzzle_new(stdin);
 
 	    printf("%d\n", i);
-	    printf("%d\n", puzzle_solve(p));
+	    puzzle_solve(p);
 	    puzzle_display(p, stdout);
 
 	    puzzle_destroy(p);
