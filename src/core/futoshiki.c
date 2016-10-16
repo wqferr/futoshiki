@@ -18,6 +18,7 @@ typedef struct Cell {
     struct Cell *constr[4];
 
     uchar *restrictedValues;
+    uchar nPossibilities;
 
 } Cell;
 
@@ -36,6 +37,7 @@ Cell *cell_new(Puzzle *p, uchar row, uchar col, uchar val) {
     c->col = col;
     c->nConstr = 0;
     c->restrictedValues = calloc(p->size, sizeof(*c->restrictedValues));
+    c->nPossibilities = p->size;
 
     return c;
 }
@@ -53,10 +55,14 @@ void _strengthenRestrValues(Puzzle *p, uchar row, uchar col, uchar val) {
         for (i = 0; i < p->size; i++) {
             if (i != col) {
                 otherInRow = p->cells[row][i];
+                if (otherInRow->restrictedValues[val-1] == 0)
+                    otherInRow->nPossibilities--;
                 otherInRow->restrictedValues[val-1]++;
             }
             if (i != row) {
                 otherInCol = p->cells[i][col];
+                if (otherInCol->restrictedValues[val-1] == 0)
+                    otherInCol->nPossibilities--;
                 otherInCol->restrictedValues[val-1]++;
             }
         }
@@ -72,11 +78,15 @@ void _lessenRestrValues(Puzzle *p, uchar row, uchar col, uchar val) {
             if (i != col) {
                 otherInRow = p->cells[row][i];
                 otherInRow->restrictedValues[val-1]--;
+                if (otherInRow->restrictedValues[val-1] == 0)
+                    otherInRow->nPossibilities++;
             }
 
             if (i != row) {
                 otherInCol = p->cells[i][col];
                 otherInCol->restrictedValues[val-1]--;
+                if (otherInCol->restrictedValues[val-1] == 0)
+                    otherInCol->nPossibilities++;
             }
         }
     }
@@ -87,7 +97,7 @@ void _updateRestrictedValues(Puzzle *p, Cell *c, uchar newVal) {
     _strengthenRestrValues(p, c->row, c->col, newVal);
 }
 
-bool cell_nextValue(Puzzle *p, Cell *c) {
+bool cell_nextValue(Puzzle *p, Cell *c, int *assignments) {
 #if OPT_LEVEL < OPT_FORWARD_CHECKING
 
     c->val = (c->val+1) % (p->size+1);
@@ -107,20 +117,9 @@ bool cell_nextValue(Puzzle *p, Cell *c) {
     c->val = newVal;
 #endif
 
+    (*assignments)++;
     return c->val > 0;
 }
-
-#if OPT_LEVEL >= OPT_MVR
-uchar cell_calcComplexity(Puzzle *p, Cell *c) {
-    uchar cmp = 0;
-    uchar i;
-    for (i = 0; i < p->size; i++)
-        if (c->restrictedValues[i] == 0)
-            cmp++;
-
-    return cmp;
-}
-#endif
 
 
 
@@ -153,16 +152,13 @@ Cell *cell_nextInSeq(Puzzle *p, Cell *c) {
         j = 0;
         while (j < p->size) {
             c = p->cells[i][j];
-            //fprintf(stderr, "[%hhu %hhu] = %hhu", c->row, c->col, c->val);
             if (c->val == 0) {
-                currComplexity = cell_calcComplexity(p, c);
-                //fprintf(stderr, "-> %hhu", currComplexity);
+                currComplexity = c->nPossibilities;
                 if (currComplexity < easiestComplexity) {
                     easiest = c;
                     easiestComplexity = currComplexity;
                 }
             }
-            //fprintf(stderr, "\n");
             j++;
         }
         i++;
@@ -170,6 +166,71 @@ Cell *cell_nextInSeq(Puzzle *p, Cell *c) {
 
     return easiest;
 #endif
+}
+
+uchar cell_smallestPossibility(Puzzle *p, Cell *c) {
+    uchar i;
+    if (c->val > 0)
+        return c->val;
+    for (i = 0; i < p->size; i++)
+        if (c->restrictedValues[i] == 0)
+            return i+1;
+    return 0;
+}
+
+uchar cell_greatestPossibility(Puzzle *p, Cell *c) {
+    uchar i;
+    if (c->val > 0)
+        return c->val;
+    for (i = 1; i <= p->size; i++)
+        if (c->restrictedValues[p->size-i] == 0)
+            return p->size-i + 1;
+    return 0;
+}
+
+void _updateIneqRestr(Puzzle *p) {
+    ListIterator *iter = list_iterator(p->constrCells);
+    Cell *c, *other;
+    uchar i, j, lim;
+
+    while (listiter_hasNext(iter)) {
+        c = listiter_next(iter);
+        for (i = 0; i < c->nConstr; i++) {
+            other = c->constr[i];
+
+            lim = cell_smallestPossibility(p, c);
+            for (j = 0; j < lim; j++)
+                other->restrictedValues[j]++;
+
+            lim = cell_greatestPossibility(p, other);
+            for (j = lim; j < p->size; j++)
+                c->restrictedValues[j]++;
+        }
+    }
+
+    listiter_destroy(iter);
+}
+
+void puzzle_simplify(Puzzle *p) {
+    bool altered;
+    uchar i, j, newVal;
+    Cell *c;
+
+    do {
+        altered = false;
+        for (i = 0; i < p->size; i++) {
+            for (j = 0; j < p->size; j++) {
+                c = p->cells[i][j];
+                if (c->val == 0 && c->nPossibilities == 1) {
+                    newVal = cell_smallestPossibility(p, c);
+                    _updateRestrictedValues(p, c, newVal);
+                    c->val = newVal;
+                    altered = true;
+                }
+            }
+        }
+        _updateIneqRestr(p);
+    } while (altered);
 }
 
 
@@ -215,6 +276,10 @@ Puzzle *puzzle_new(FILE *stream) {
                 _strengthenRestrValues(p, i, j, v);
         }
     }
+
+#if OPT_LEVEL >= OPT_SIMPLIFY
+    puzzle_simplify(p);
+#endif
 
     return p;
 }
@@ -319,20 +384,22 @@ Cell *_firstCell(Puzzle *p) {
     return NULL;
 }
 
-bool _backtrack(Puzzle *p, Cell *c) {
+bool _backtrack(Puzzle *p, Cell *c, int *assignments) {
     if (c == NULL)
         return puzzle_checkSolved(p);
+    if (*assignments >= ASSIGN_MAX)
+        return false;
 
-    while (cell_nextValue(p, c)) {
-        if (_backtrack(p, cell_nextInSeq(p, c)))
+    while (cell_nextValue(p, c, assignments)) {
+        if (_backtrack(p, cell_nextInSeq(p, c), assignments))
             return true;
     }
 
     return false;
 }
 
-bool puzzle_solve(Puzzle *p) {
-    return _backtrack(p, _firstCell(p));
+bool puzzle_solve(Puzzle *p, int *assignments) {
+    return _backtrack(p, _firstCell(p), assignments);
 }
 
 void puzzle_display(const Puzzle *p, FILE *stream) {

@@ -4,8 +4,10 @@
 #define OPT_NONE 0
 #define OPT_FORWARD_CHECKING 1
 #define OPT_MVR 2
+#define OPT_SIMPLIFY 3
 
-#define OPT_LEVEL OPT_FORWARD_CHECKING
+#define OPT_LEVEL OPT_SIMPLIFY
+#define ASSIGN_MAX 1e6
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -28,7 +30,7 @@ void puzzle_destroy(Puzzle *);
  * Retruns wether or not the puzzle has a solution.
  * If not, the state of the cells are not changed.
  */
-bool puzzle_solve(Puzzle *);
+bool puzzle_solve(Puzzle *, int *);
 
 /**
  * Displays the Puzzle to the given output stream.
