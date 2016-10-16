@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #include "core/futoshiki.h"
 #include "struct/list.h"
@@ -109,8 +110,24 @@ bool cell_nextValue(Puzzle *p, Cell *c) {
     return c->val > 0;
 }
 
+#if OPT_LEVEL >= OPT_MVR
+uchar cell_calcComplexity(Puzzle *p, Cell *c) {
+    uchar cmp = 0;
+    uchar i;
+    for (i = 0; i < p->size; i++)
+        if (c->restrictedValues[i] == 0)
+            cmp++;
+
+    return cmp;
+}
+#endif
+
+
+
 Cell *cell_nextInSeq(Puzzle *p, Cell *c) {
     uchar i, j;
+
+#if OPT_LEVEL < OPT_MVR
     i = c->row;
     j = c->col + 1;
 
@@ -125,6 +142,34 @@ Cell *cell_nextInSeq(Puzzle *p, Cell *c) {
         i++;
     }
     return NULL;
+#else
+    Cell *easiest = NULL;
+    uchar easiestComplexity = UCHAR_MAX;
+    uchar currComplexity;
+    i = 0;
+    j = 0;
+
+    while (i < p->size) {
+        j = 0;
+        while (j < p->size) {
+            c = p->cells[i][j];
+            //fprintf(stderr, "[%hhu %hhu] = %hhu", c->row, c->col, c->val);
+            if (c->val == 0) {
+                currComplexity = cell_calcComplexity(p, c);
+                //fprintf(stderr, "-> %hhu", currComplexity);
+                if (currComplexity < easiestComplexity) {
+                    easiest = c;
+                    easiestComplexity = currComplexity;
+                }
+            }
+            //fprintf(stderr, "\n");
+            j++;
+        }
+        i++;
+    }
+
+    return easiest;
+#endif
 }
 
 
