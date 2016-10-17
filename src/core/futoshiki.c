@@ -97,24 +97,34 @@ void _updateRestrictedValues(Puzzle *p, Cell *c, uchar newVal) {
     _strengthenRestrValues(p, c->row, c->col, newVal);
 }
 
+bool _forwardCheck(Puzzle *p) {
+    uchar i, j;
+
+    for (i = 0; i < p->size; i++)
+        for (j = 0; j < p->size; j++)
+            if (p->cells[i][j]->val == 0 && p->cells[i][j]->nPossibilities == 0)
+                return false;
+    return true;
+}
+
 bool cell_nextValue(Puzzle *p, Cell *c, int *assignments) {
-#if OPT_LEVEL < OPT_FORWARD_CHECKING
+    uchar newVal;
+#if OPT_LEVEL >= OPT_FORWARD_CHECKING
+    do {
+#endif
+        newVal = c->val+1;
 
-    c->val = (c->val+1) % (p->size+1);
+        while (newVal <= p->size && c->restrictedValues[newVal-1] > 0) {
+            newVal++;
+        }
 
-#else
+        if (newVal > p->size)
+            newVal = 0;
 
-    uchar newVal = c->val+1;
-
-    while (newVal <= p->size && c->restrictedValues[newVal-1] > 0) {
-        newVal++;
-    }
-
-    if (newVal > p->size)
-        newVal = 0;
-
-    _updateRestrictedValues(p, c, newVal);
-    c->val = newVal;
+        _updateRestrictedValues(p, c, newVal);
+        c->val = newVal;
+#if OPT_LEVEL >= OPT_FORWARD_CHECKING
+    } while (newVal > 0 && !_forwardCheck(p));
 #endif
 
     (*assignments)++;
