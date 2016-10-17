@@ -8,7 +8,6 @@
 int main(void) {
 
 	unsigned int i, ncases;
-    unsigned int success = 0;
     int assignments;
 	scanf("%d", &ncases);
 
@@ -17,7 +16,7 @@ int main(void) {
         assignments = 0;
 
 	    printf("%d\n", i);
-	    success += puzzle_solve(p, &assignments);
+	    puzzle_solve(p, &assignments);
         if (assignments < ASSIGN_MAX) {
             puzzle_display(p, stdout);
         } else {
@@ -26,6 +25,5 @@ int main(void) {
 
 	    puzzle_destroy(p);
 	}
-    printf("%.2f%% dos jogos foram resolvidos\n", (100.0f*success)/ncases);
     return 0;
 }
