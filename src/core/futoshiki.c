@@ -269,7 +269,7 @@ bool _updateIneqRestr(Puzzle *p) {
                     other->nPossibilities--;
                     altered = true;
                 }
-                other->restrictedValues[j] = 5;
+                other->restrictedValues[j] = 1;
             }
 
             // Análogo, mas partindo do fato de que c->val < max(other)
@@ -279,7 +279,7 @@ bool _updateIneqRestr(Puzzle *p) {
                     c->nPossibilities--;
                     altered = true;
                 }
-                c->restrictedValues[j] = 5;
+                c->restrictedValues[j] = 1;
             }
         }
     }
